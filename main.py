@@ -245,6 +245,7 @@ def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
                 "asunto": subject,
                 "de": from_,
                 "archivo": filename,
+                "mail_id": mail_id,
                 "json_base64": json_base64
             })
 
