@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, EmailStr
 # CONFIGURACIÓN
 # =========================
 
-API_KEY = os.getenv("API_KEY", "123456")
+API_KEY = os.getenv("API_KEY", "fd7be1d1-5cf2-4639-8685-9a4951826f90")
 
 app = FastAPI()
 
