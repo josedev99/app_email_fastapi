@@ -1,0 +1,9 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+
+# Entornos virtuales
+.env
+# Files
+app.py
