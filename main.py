@@ -10,6 +10,7 @@ from email.header import decode_header
 from datetime import datetime, timedelta
 from email.header import decode_header
 from pydantic import BaseModel, Field, EmailStr
+from email.utils import parseaddr
 
 # =========================
 # CONFIGURACIÓN
@@ -146,6 +147,12 @@ def mostrar_json_base64(payload_bytes):
 # PROCESAR CORREOS
 # =========================
 
+@app.get("/status")
+def status_app():
+    return {
+        "status": "online"
+    }
+
 @app.post("/correos/json")
 def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
     if x_api_key != API_KEY:
@@ -214,7 +221,9 @@ def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
             continue
 
         subject = limpiar_texto(decode_mime_header(msg.get("Subject")))
-        from_ = decode_mime_header(msg.get("From"))
+
+        from_raw = decode_mime_header(msg.get("From"))
+        _, from_email = parseaddr(from_raw)
 
         for part in msg.walk():
             content_disposition = str(part.get("Content-Disposition", "")).lower()
@@ -243,7 +252,7 @@ def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
             json_base64 = base64.b64encode(json_bytes).decode("utf-8")
             resultados.append({
                 "asunto": subject,
-                "de": from_,
+                "de": from_email,
                 "archivo": filename,
                 "mail_id": mail_id,
                 "json_base64": json_base64
