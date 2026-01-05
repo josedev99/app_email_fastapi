@@ -3,6 +3,7 @@ from fastapi import FastAPI
 import imaplib
 import email
 import os
+import io
 import json
 import base64
 import re
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta
 from email.header import decode_header
 from pydantic import BaseModel, Field, EmailStr
 from email.utils import parseaddr
+import zipfile
 
 # =========================
 # CONFIGURACIÓN
@@ -217,45 +219,47 @@ def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
 
         msg = email.message_from_bytes(msg_data[0][1])
 
+
         if not msg.is_multipart():
             continue
-
         subject = limpiar_texto(decode_mime_header(msg.get("Subject")))
 
         from_raw = decode_mime_header(msg.get("From"))
         _, from_email = parseaddr(from_raw)
 
         for part in msg.walk():
-            content_disposition = str(part.get("Content-Disposition", "")).lower()
 
-            if "attachment" not in content_disposition:
+            if part.get_content_maintype() == 'multipart':
+                continue
+
+            if part.get('Content-Disposition') is None:
                 continue
 
             filename = limpiar_texto(part.get_filename() or "")
+            if not filename:
+                continue
 
+            # Decodificar nombre
+            decoded_name, encoding = decode_header(filename)[0]
+            if isinstance(decoded_name, bytes):
+                filename = decoded_name.decode(encoding or "utf-8")
+
+            #Filtrar por JSON
             if not filename.lower().endswith(".json"):
                 continue
 
-            payload = part.get_payload(decode=True)
+            #Contenido del archivo
+            file_bytes = part.get_payload(decode=True)
 
-            try:
-                json_data = json.loads(payload.decode("utf-8"))
-            except Exception:
-                continue
+            #Codificado Base64
+            file_base64 = base64.b64encode(file_bytes).decode("utf-8")
 
-            json_bytes = json.dumps(
-                json_data,
-                ensure_ascii=False,
-                separators=(",", ":")
-            ).encode("utf-8")
-
-            json_base64 = base64.b64encode(json_bytes).decode("utf-8")
             resultados.append({
                 "asunto": subject,
                 "de": from_email,
                 "archivo": filename,
                 "mail_id": mail_id,
-                "json_base64": json_base64
+                "json_base64": file_base64
             })
 
     imap.close()
