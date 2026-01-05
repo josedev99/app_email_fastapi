@@ -145,6 +145,14 @@ def mostrar_json_base64(payload_bytes):
     except Exception as e:
         print("Error procesando JSON:", e)
 
+def decode_json_bytes(file_bytes):
+    for enc in ("utf-8", "utf-8-sig", "latin1", "iso-8859-1", "cp1252"):
+        try:
+            return json.loads(file_bytes.decode(enc))
+        except Exception:
+            continue
+    return None
+
 # =========================
 # PROCESAR CORREOS
 # =========================
@@ -251,8 +259,21 @@ def obtener_correos_json(data: RangoFechas, x_api_key: str = Header(None)):
             #Contenido del archivo
             file_bytes = part.get_payload(decode=True)
 
+            if not file_bytes:
+                continue
+
+            file_bytes = file_bytes.lstrip(b'\xef\xbb\xbf')
+
+            json_obj = decode_json_bytes(file_bytes)
+            if json_obj is None:
+                continue
+                
             #Codificado Base64
-            file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+            #file_base64 = base64.b64encode(file_bytes).decode("utf-8")
+        
+            file_base64 = base64.b64encode(
+                json.dumps(json_obj, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii")
 
             resultados.append({
                 "asunto": subject,
